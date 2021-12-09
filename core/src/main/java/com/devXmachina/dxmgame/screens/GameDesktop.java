@@ -1,6 +1,7 @@
 package com.devXmachina.dxmgame.screens;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Stage;
@@ -9,7 +10,6 @@ import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
 import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Array;
-import com.badlogic.gdx.utils.StringBuilder;
 import com.badlogic.gdx.utils.viewport.FitViewport;
 import com.devXmachina.dxmgame.DxM_Game;
 import com.devXmachina.dxmgame.GameLoader;
@@ -17,12 +17,14 @@ import com.devXmachina.dxmgame.desktopActors.*;
 import com.devXmachina.dxmgame.gamelogic.GameEvent;
 import com.devXmachina.dxmgame.gamelogic.SuperPool;
 
+
 public class GameDesktop extends Stage {
-    private static final int ASYNC_PULSE = 40;
+    private static final int ASYNC_PULSE = 60;
     private Skin skin;
     private DxM_Game game;
     private GameLoader gameLoader;
     Table dockZone;
+    ProgressBar progressBar;
     private ImageButton sound,turnOff,reputation,money,calendar,nextEventButton;
     boolean mute;
     private Label currentMoney,currentReputation,currentDate;
@@ -32,6 +34,9 @@ public class GameDesktop extends Stage {
    public boolean currentNotification;
    public Array<PopNotification> notificationQueue;
    private  int timeTickCounter;
+
+
+
     public GameDesktop(FitViewport fitViewport, DxM_Game game) {
         super(fitViewport);
         this.game = game;
@@ -85,15 +90,35 @@ public class GameDesktop extends Stage {
         topBar.add(gameLoader.superPool.obtain_label("DxM Game", skin)).padLeft(20.0f).padRight(20.0f).align(Align.left);
         topBar.add(nextEventButton).padLeft(20.0f).padRight(20.0f).align(Align.left);
         topBar.add("").growX();
-        topBar.add(reputation).padLeft(6.0f);
-        topBar.add(gameLoader.superPool.obtain_label("0"+gameLoader.getCurrentReputation(), skin)).padLeft(2.0f);
+        progressBar = new ProgressBar(0.0f, 2.5f, 0.1f, false, gameLoader.getSkin("BIOS2"));
+        progressBar.setColor(Color.CYAN);
+        progressBar.setValue(gameLoader.getDecadeProgress());
+        topBar.add( progressBar);
         topBar.add(money).padLeft(6.0f);
-        topBar.add(gameLoader.superPool.obtain_label("00"+gameLoader.getCurrentMoney(), skin)).padLeft(6.0f);
+        topBar.add(gameLoader.superPool.obtain_label(intToString(gameLoader.getCurrentMoney(),6), skin)).padLeft(6.0f);
+        topBar.add(reputation).padLeft(6.0f);
+        topBar.add(gameLoader.superPool.obtain_label(intToString(gameLoader.getCurrentReputation(),6), skin)).padLeft(2.0f);
         currentDate = gameLoader.superPool.obtain_label("20/4/"+gameLoader.getCurrentDecade().toString(),skin);
         topBar.add(calendar).padLeft(10.0f);
         topBar.add(currentDate);
         topBar.add(sound).padRight(10.f).padLeft(10.f);
         topBar.add(turnOff);
+    }
+    static String intToString(int num, int digits) {
+        // format number as String
+        String str=""+num;
+        str.trim();
+        if(str.length()<digits){
+            int length=  digits-str.length();
+            String newStr= "";
+            for(int i=0; i<length;i++){
+                newStr+="0";
+            }
+            newStr+=str;
+            str=newStr;
+        }
+
+        return str;
     }
     private void createTopBarButtons() {
         turnOff = new ImageButton(game.gameLoader.getPicture("switch"),game.gameLoader.getPicture("switchb"));
@@ -109,7 +134,7 @@ public class GameDesktop extends Stage {
             @Override
             public void clicked(InputEvent event, float x, float y) {
                 super.clicked(event, x, y);
-                gameLoader.fire_gameEvent();
+                gameLoader.eventManager.fire_nextEvent();
             }
         });
         turnOff.addListener(new ChangeListener() {
@@ -214,14 +239,12 @@ public class GameDesktop extends Stage {
         if(gameEvent.getDesktopGameApp().equals(DxM_Game.DesktopAppType.BROWSER)){
             getApp(focus).getBrowserWindow().selectURL(gameEvent.getAppWebPage()).update();
         }
-
-        //TODO
     }
 
     //-----------------------------------------------------------------------NOTIFICATION
 
     public void sendNotification(GameEvent newGameEvent,String title,String text) {
-        notificationQueue.add(gameLoader.superPool.obtain_popNotification(this.game,this,newGameEvent,title,text));
+        if(!gameLoader.isAutoPlay()){notificationQueue.add(gameLoader.superPool.obtain_popNotification(this.game,this,newGameEvent,title,text));}
     }
     public void disposeNotification(PopNotification notification) {
         currentNotification=false;
@@ -231,24 +254,51 @@ public class GameDesktop extends Stage {
 
     //-----------------------------------------------------------------------GAME METHODS
     public void update(){
-        if(timeTicker()){ gameLoader.updateGameData();}
-        mail.update();
-        browser.update();
-        taskManager.update();
 
-    }
+        if(gameLoader.isAutoPlay()){
+            gameLoader.updateGameData();
+        }else {
+            int timeTick = timeTicker();
+            switch (timeTick) {
+                case 1:
+                    try {
+                        taskManager.updateManager(true);
+                    } catch (Exception e) {
 
-    private boolean timeTicker() {
-        if(timeTickCounter>ASYNC_PULSE){
-            timeTickCounter=0;
-            return true;
-        }else{
-            if(timeTickCounter==(int)(ASYNC_PULSE/2)){
-                updateTopBar();
+                    }
+                    break;
+                case 2:
+                    updateTopBar();
+                    break;
+                case 3:
+                    taskManager.updateManager(true);
+                    break;
+                case 4:
+                    gameLoader.updateGameData();
+                    break;
+                default:
+                    mail.update();
+                    browser.update();
+                    //do nothing
+                    break;
             }
         }
+    }
+    private int timeTicker() {
         timeTickCounter++;
-        return false;
+        if(timeTickCounter>ASYNC_PULSE){
+            timeTickCounter=0;
+            return 4;
+        }else if (timeTickCounter==(int)((ASYNC_PULSE/4)*3)){
+            updateTopBar();
+                return 3;
+
+        }else if (timeTickCounter==(int)(ASYNC_PULSE/4)) {
+            return 2;
+        }else if (timeTickCounter==1){
+            return 1;
+        }
+        return 0;
     }
 
     @Override
@@ -260,7 +310,6 @@ public class GameDesktop extends Stage {
         this.update();
         if(notificationQueue.notEmpty()){
                 notificationQueue.get(0).reSendNotification();
-
         }
         super.draw();
     }
@@ -294,7 +343,7 @@ public class GameDesktop extends Stage {
             }
             skin.dispose();
         }catch (IllegalArgumentException ex){
-            System.out.println("Error disposing some elements: \n           "+ ex.getStackTrace().toString()+"\n           "+ex.fillInStackTrace().toString());
+            //THIS IS A MASK
         }
 
     }

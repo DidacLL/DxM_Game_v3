@@ -1,5 +1,6 @@
 package com.devXmachina.dxmgame.desktopActors;
 
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
@@ -12,6 +13,7 @@ import com.badlogic.gdx.utils.Pool;
 import com.devXmachina.dxmgame.DxM_Game;
 import com.devXmachina.dxmgame.GameLoader;
 import com.devXmachina.dxmgame.gamelogic.GameEvent;
+import com.devXmachina.dxmgame.gamelogic.ResultStruct;
 
 
 public class AppPage extends Table implements Pool.Poolable {
@@ -20,9 +22,9 @@ public class AppPage extends Table implements Pool.Poolable {
     private final static int FACEBOOK_PROFILE_IMG = 0;
     private final static int FACEBOOK_COVER_IMG = 1;
     private final static int FACEBOOK_NAME_TXT = 0;
-    private final static int FACEBOOK_TEXT_TXT=1;
-    private final static int FACEBOOK_BUTTONA_TXT=2;
-    private final static int FACEBOOK_BUTTONB_TXT=3;
+    private final static int FACEBOOK_TEXT_TXT=2;
+    private final static int FACEBOOK_BUTTONA_TXT=3;
+    private final static int FACEBOOK_BUTTONB_TXT=4;
     private final static int FACEBOOK_NOTIFICATION_TXT=4;
     private final static int MAIL_SIGNATURE_IMG = 0;
     private final static int MAIL_IMG = 1;
@@ -63,13 +65,20 @@ public class AppPage extends Table implements Pool.Poolable {
         this.gameLoader=gameLoader;
         this.align(Align.topLeft);
         this.webPageURL = browserURL;
-        this.assignedEvents = new Array<GameEvent>();
+        this.assignedEvents = new Array<>();
         this.eventButtons =new Array<>();
         this.blue_button_bckgrnd= gameLoader.getPicture("MAIL_index_button_chk");
-        webBodies = new Array<Table>();
+        webBodies = new Array<>();
         bodySP= new ScrollPane(createBody(webPageURL,null));
         bodySP.layout();
         mainfullpage_construct();
+        if(browserURL.equals(DxM_Game.BrowserURL.MAIL)||browserURL.equals(DxM_Game.BrowserURL.FACEBOOK)){
+            this.setSkin(gameLoader.getSkin("BLUEDESK"));
+            getSkin().get(Button.ButtonStyle.class).checked=blue_button_bckgrnd;
+        }else{
+            this.setSkin(gameLoader.getSkin("DESKTOP"));
+            getSkin().get(Button.ButtonStyle.class).checked=getSkin().get(Button.ButtonStyle.class).down;
+        }
     }
 
     private void mainfullpage_construct() {
@@ -87,24 +96,37 @@ public class AppPage extends Table implements Pool.Poolable {
 
     }
     public void update(){
-        if(updateIndex){
-            reLoadIndex();
-            updateIndex = false;
-        }
-        if(updatePage){
-            bodySP.clear();
-            if(currentEvent!=null){
-                currentBody = searchBody(currentEvent);
-                if (!currentEvent.viewed) {
-                    app.toogle_IconNotification(false);
-                    currentEvent.viewed = true;
-                    app.dockIcon.update();
-                }
-            }else{
-                if(webBodies.notEmpty()){if(currentBody!= webBodies.first()){currentBody= webBodies.first();}}
-            }
+        clean_assignedEvents();
+        if(this.webPageURL.equals(DxM_Game.BrowserURL.WIKI)&&updatePage) {
             bodySP.setActor(currentBody);
             updatePage=false;
+        }else if ( this.webPageURL.equals(DxM_Game.BrowserURL.NEWS)&&updatePage){
+            bodySP.setActor(newsBodyConstruct(gameLoader.superPool.obtain_table(getSkin())));
+            updatePage=false;
+        }else {
+            if (updateIndex) {
+                reLoadIndex();
+                updateIndex = false;
+            }
+            if (updatePage) {
+                bodySP.clear();
+                if (currentEvent != null) {
+                    currentBody = searchBody(currentEvent);
+                    if (!currentEvent.viewed) {
+                        app.toogle_IconNotification(false);
+                        currentEvent.viewed = true;
+                        app.dockIcon.update();
+                    }
+                } else {
+                    if (webBodies.notEmpty()) {
+                        if (currentBody != webBodies.first()) {
+                            currentBody = webBodies.first();
+                        }
+                    }
+                }
+                bodySP.setActor(currentBody);
+                updatePage = false;
+            }
         }
     }
     //----------------------------------------------------------------------------Index_Constructors
@@ -126,21 +148,12 @@ public class AppPage extends Table implements Pool.Poolable {
                 break;
             case WIKI:
                 name=this.webPageURL.name();
-                table= constructIndexFields(wikiIndexConstruct(table), name);
+                table= wikiIndexConstruct(table);
                 table.pack();
                 break;
             case MAIL:
                 name=this.webPageURL.name();
                 table= constructIndexFields(mailIndexConstruct(table), name);
-                table.pack();
-                break;
-            case NEWS:
-                name=this.webPageURL.name();
-                table.pack();
-                break;
-            case YAHOO:
-                name=this.webPageURL.name();
-                table= yahooBodyConstruct(table);
                 table.pack();
                 break;
             default:
@@ -159,10 +172,74 @@ public class AppPage extends Table implements Pool.Poolable {
     }
     private Table wikiIndexConstruct(Table table) {
         table.setBackground("progress-bar-horizontal");
-        table.add(gameLoader.superPool.obtain_label("Index", getSkin())).padLeft(20.0f).padRight(20.0f).align(Align.left);
+        table.defaults().align(Align.top).pad(10,10,10,10).fillX();
+        table.add(gameLoader.superPool.obtain_label("Index", getSkin())).padLeft(20.0f).padRight(20.0f).align(Align.topLeft);
         table.row();
+        Table memberBody = createWikiBody("MEMBERS", "Dxm Members");
+        Table conceptsBody = createWikiBody("CONCEPTS","Conceptes Basics");
+        Table iaBody = createWikiBody("IA", "     I.A.   ");
+        Table openSourceBody = createWikiBody("OPENSOURCE", "OpenSource");
+        create_wikiButton("MEMBERS","DxM_Members",memberBody);
+        create_wikiButton("CONCEPTS","Conceptes",conceptsBody);
+        create_wikiButton("IA"," I.A. ",iaBody);
+        create_wikiButton("OPENSOURCE","OpenSource",openSourceBody);
+
+        for(Button button:eventButtons){
+            table.add(button);
+            table.row();
+        }
+        table.row();
+        table.add().growY().expandY().fill();
         return table;
     }
+
+    private Table createWikiBody(String sectionREF,String sectionName) {
+        Table table = gameLoader.superPool.obtain_table(getSkin());
+        table.setBackground("white-rect");
+        Label titleLabel = new Label(sectionName,getSkin(), "title");
+        titleLabel.setFontScale(0.6f);
+        table.add(titleLabel).expandX().row();
+        for (String element : gameLoader.wiki_txt) {
+            String[] article = element.split("//");
+            if(article[0].equalsIgnoreCase(sectionREF)) {
+                table.row();
+                table.add(article[1]).align(Align.topLeft).row();
+                for (int i = 2; i < article.length; i++) {
+                    Label label = gameLoader.superPool.obtain_label("",getSkin());
+                    label.setText(article[i]);
+                    label.setWrap(true);
+                    table.add(label).align(Align.topLeft).fillX().growY().pad(12,10,10,10);
+                    table.row();
+                }
+                table.row();
+                table.add().padTop(20);
+            }
+        }
+        table.setName(sectionREF);
+        return table;
+    }
+
+    private void create_wikiButton(String sectionREF, String sectionName, Table wikiBody) {
+        Button button;
+        button = gameLoader.superPool.obtain_button(getSkin());
+        button.setName(sectionREF);
+        button.add(gameLoader.superPool.obtain_label(sectionName, getSkin())).expandX();
+        button.addListener(new ClickListener(){
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                super.clicked(event, x, y);
+                updatePage = true;
+                uncheckButtons();
+                searchButton(sectionREF).setChecked(true);
+                currentBody = wikiBody;
+                update();
+            }
+        });
+        eventButtons.add(button);
+
+    }
+
+
     private Table githubIndexConstruct(Table table) {
         table.setBackground("black");
         table.add(gameLoader.superPool.obtain_label("Collaborations:", getSkin())).padLeft(20.0f).padRight(20.0f).align(Align.left);
@@ -178,6 +255,7 @@ public class AppPage extends Table implements Pool.Poolable {
 
     private Table constructIndexFields(Table index, String appName) {
         appName += "_index_button";
+        clean_assignedEvents();
         if(assignedEvents!=null){
             Array<Button> pending;
             Array<Button> accepted;
@@ -187,7 +265,7 @@ public class AppPage extends Table implements Pool.Poolable {
                 Table body = createBody(gameEvent.getAppWebPage(),gameEvent);
                 body.setName(gameEvent.getId());
                 webBodies.add(body);
-                constructIndexButton(appName, pending, accepted, gameEvent);
+                constructIndexButton(appName, pending, accepted, gameEvent,this.getSkin());
             }
             order_indexButtons(pending,accepted,index);
             pending.clear();
@@ -198,9 +276,25 @@ public class AppPage extends Table implements Pool.Poolable {
         index.add().growY().expandY().fill();
         return index;
     }
-    private void constructIndexButton(String appName, Array<Button> pending, Array<Button> accepted, GameEvent gameEvent) {
+
+    private void clean_assignedEvents() {
+        GameEvent gameEvent;
+        if(assignedEvents.notEmpty()) {
+            for (int i = 0; i < assignedEvents.size; i++) {
+                gameEvent = assignedEvents.get(i);
+                if(gameEvent.getDecade().ordinal()+1<gameLoader.getCurrentDecade().ordinal()&&(!(gameEvent.getEventState().equals(DxM_Game.EventState.PENDING)))){
+                    assignedEvents.removeIndex(i);
+                }
+                else if(gameEvent.getEventState().equals(DxM_Game.EventState.DISCARDED)){
+                    assignedEvents.removeIndex(i);
+                }
+            }
+        }
+    }
+
+    private void constructIndexButton(String appName, Array<Button> pending, Array<Button> accepted, GameEvent gameEvent,Skin skin) {
         Button button;
-        button = gameLoader.superPool.obtain_button(getSkin());
+        button = gameLoader.superPool.obtain_button(skin);
         button.setName(gameEvent.getId()+"_button");
         if (gameEvent.getEventState().equals(DxM_Game.EventState.PENDING)) {
             button.add(gameLoader.superPool.obtain_image("unread"+ appName)).expandY();
@@ -210,7 +304,6 @@ public class AppPage extends Table implements Pool.Poolable {
             accepted.add(button);
         }
         button.add(gameLoader.superPool.obtain_label(gameEvent.getTitle(), getSkin())).expandX();
-        button.getStyle().checked = blue_button_bckgrnd;
         button.addListener(new ClickListener(){
             @Override
             public void clicked(InputEvent event, float x, float y) {
@@ -223,6 +316,7 @@ public class AppPage extends Table implements Pool.Poolable {
                 if(app.appType.equals(DxM_Game.DesktopAppType.MAIL)){
                     searchButton(gameEvent.getId()).getCells().get(0).setActor(new Image(app.game.gameLoader.getPicture("MAIL_index_button_open")));
                 }
+
             }
         });
         eventButtons.add(button);
@@ -255,11 +349,7 @@ public class AppPage extends Table implements Pool.Poolable {
                 break;
             case BLANK:
                 break;
-            case WIKI:
-                bodyTable.setBackground("white-rect");
-                wikiBodyConstruct(bodyTable);
-                webBodies.add(bodyTable);
-                break;
+
             case MAIL:
                 bodyTable.setBackground("white-rect");
                 if (gameEvent!=null){
@@ -271,8 +361,10 @@ public class AppPage extends Table implements Pool.Poolable {
                 webBodies.add(bodyTable);
                 break;
             case NEWS:
-                break;
-            case YAHOO:
+                bodyTable.setBackground("white-rect");
+                currentBody= newsBodyConstruct(bodyTable);
+                updatePage=true;
+                webBodies.add(bodyTable);
                 break;
             default:
                 bodyTable.setBackground("white-rect");
@@ -290,9 +382,14 @@ public class AppPage extends Table implements Pool.Poolable {
         bodyTable.add().growX();
         bodyTable.row();
         bodyTable.add();
-        Label label = gameLoader.superPool.obtain_label(gameEvent.getTextBlocs()[FACEBOOK_TEXT_TXT],getSkin());
+        Label label = new Label(gameEvent.getTextBlocs()[FACEBOOK_TEXT_TXT],getSkin());
+        Label.LabelStyle stylenew = new Label.LabelStyle();
+        stylenew.font=getSkin().get(Label.LabelStyle.class).font;
+        stylenew.fontColor=getSkin().get(Label.LabelStyle.class).fontColor;
+        stylenew.background= getSkin().getDrawable("white-rect");
+        label.setStyle(stylenew);
         label.setWrap(true);
-        bodyTable.add(label).align(Align.topLeft).pad(10,10,10,10).growX().colspan(2).pad(20,20,20,20);
+        bodyTable.add(label).align(Align.topLeft).pad(10,10,10,10).fillX().colspan(2).pad(20,20,60,60);
         bodyTable.row().growY();
         bodyTable.add().fill();
         bodyTable.row();
@@ -317,13 +414,47 @@ public class AppPage extends Table implements Pool.Poolable {
         bodyTable.add();
         return createEventButtons(gameEvent,bodyTable,gameEvent.getTextBlocs()[MAIL_BUTTON_A_TXT],gameEvent.getTextBlocs()[MAIL_BUTTON_B_TXT]);
     }
-    private Table wikiBodyConstruct(Table bodyTable){
-        return bodyTable;
-    }
-    private Table yahooBodyConstruct(Table bodyTable){
-        return bodyTable;
-    }
-    private Table newsBodyConstruct(GameEvent gameEvent, Table bodyTable){
+    private Table newsBodyConstruct(Table bodyTable){
+        bodyTable.setBackground("white-rect");
+        if(assignedEvents.notEmpty()){
+            Array<GameEvent> newNews = new Array<>();
+            Array<GameEvent> oldNews= new Array<>();
+            bodyTable.row();
+            for(GameEvent newsEvent: assignedEvents){
+                if(newsEvent.getEventState().equals(DxM_Game.EventState.PENDING)){
+                    newNews.add(newsEvent);
+                }else{
+                    oldNews.add(newsEvent);
+
+                }
+            }
+            for(GameEvent newEvent: newNews){
+                final Label label = new Label(newEvent.getTitle(), getSkin(),"title");
+                label.setFontScale(0.3f);
+                bodyTable.add();
+                bodyTable.add(label).align(Align.top).padTop(20).colspan(2).expandX().row();
+                bodyTable.add(gameLoader.superPool.obtain_image(newEvent.getImages()[0])).align(Align.topLeft).pad(10,2,10,2);
+                final Label textLabel =  gameLoader.superPool.obtain_label(newEvent.getTextBlocs()[1],getSkin());
+                textLabel.setWrap(true);
+                bodyTable.add(textLabel).align(Align.left).fillX().colspan(2).pad(10,10,10,10);
+                bodyTable.row();
+                createEventButtons(newEvent,bodyTable,newEvent.getTextBlocs()[3],newEvent.getTextBlocs()[4]);
+                bodyTable.row();
+            }
+            for(GameEvent newEvent: oldNews){
+                final Label label = new Label(newEvent.getTitle(), getSkin(),"title");
+                label.setFontScale(0.3f);
+                bodyTable.add();
+                bodyTable.add(label).align(Align.top).padTop(20).colspan(2).row();
+                bodyTable.add(gameLoader.superPool.obtain_image(newEvent.getImages()[0])).align(Align.topLeft).pad(10,2,10,2);
+                final Label textLabel =  gameLoader.superPool.obtain_label(newEvent.getTextBlocs()[1],getSkin());
+                textLabel.setWrap(true);
+                bodyTable.add(textLabel).align(Align.left).growX().colspan(2).pad(10,10,10,10);
+                bodyTable.row();
+                createEventButtons(newEvent,bodyTable,newEvent.getTextBlocs()[3],newEvent.getTextBlocs()[4]);
+                bodyTable.row();
+            }
+        }
         return bodyTable;
     }
     private Table mailBodyConstruct(GameEvent gameEvent, Table bodyTable){
@@ -393,7 +524,7 @@ public class AppPage extends Table implements Pool.Poolable {
             if(this.webPageURL.equals(DxM_Game.BrowserURL.MAIL)){
                 String name= eventButtons.get(i).getName();
                 name= name.replace("_button","");
-                GameEvent gameEvent= app.game.gameLoader.getGameEvent(name);
+                GameEvent gameEvent= gameLoader.eventManager.getGameEvent_fromMainList(name);
                 if (gameEvent.getEventState().equals(DxM_Game.EventState.PENDING)) {
                     eventButtons.get(i).getCells().get(0).setActor(gameLoader.superPool.obtain_image("unreadMAIL_index_button")).expandY();
 
@@ -424,65 +555,93 @@ public class AppPage extends Table implements Pool.Poolable {
                 @Override
                 public void clicked(InputEvent event, float x, float y) {
                     super.clicked(event, x, y);
-                        confirm_event(gameEvent);
-                        handleResult(gameEvent,true);
 
+                    if(gameEvent.getEventCost(true)> gameLoader.getCurrentMoney()||gameEvent.getEventCost(false) > gameLoader.getCurrentReputation()){
+                        Dialog dialog = new Dialog("", getSkin());
+                        dialog.getTitleTable().reset();
+                        Label label = new Label("ERR_NOT_ENOUGH_FOUNDS", getSkin());
+                        label.setAlignment(Align.bottom);
+                        dialog.getTitleTable().add(label).expand();
+                        dialog.text("\n Hey "+ gameLoader.getUserName()+" ,\n \n  You don't have enough founds!   \n \n Current Money: "+gameLoader.getCurrentMoney()+"\n Current Reputation: "+gameLoader.getCurrentReputation()+" \n\n").button("...ok", true)
+                                .key(Input.Keys.ENTER, true).key(Input.Keys.ESCAPE, false).show(app.desktop);
+                    }else {
+                        answer_event_page(gameEvent, gameEvent.handle_eventAnswer(true));
+                    }
                 }
             });
             buttonB.addListener(new ClickListener() {
                 @Override
                 public void clicked(InputEvent event, float x, float y) {
                     super.clicked(event, x, y);
-                    handleResult(gameEvent,false);
-                    if(gameEvent.getLinkedEvents()!=null){
-                        confirm_event(gameEvent);
-                        handleResult(gameEvent,false);
+                    if(gameEvent.isDoubleAnswer()&&(!gameEvent.isVirus())){
+                        if(gameEvent.getEventCost(true) > gameLoader.getCurrentMoney()||gameEvent.getEventCost(false) > gameLoader.getCurrentReputation()){
+                            Dialog dialog = new Dialog("", getSkin());
+                            dialog.getTitleTable().reset();
+                            Label label = new Label("ERR_NOT_ENOUGH_FOUNDS", getSkin());
+                            label.setAlignment(Align.bottom);
+                            dialog.getTitleTable().add(label).expand();
+                            dialog.text("\n Hey "+ gameLoader.getUserName()+" ,\n \n  You don't have enough founds!   \n \n Current Money: "+gameLoader.getCurrentMoney()+"\n Current Reputation: "+gameLoader.getCurrentReputation()+" \n\n").button("...ok", true)
+                                    .key(Input.Keys.ENTER, true).key(Input.Keys.ESCAPE, false).show(app.desktop);
+                        }else {
+                            answer_event_page(gameEvent, gameEvent.handle_eventAnswer(false));
+                        }
                     }
                     else {
-                        discard_event(gameEvent);
+                        answer_event_page(gameEvent, gameEvent.handle_eventAnswer(false));
                     }
                 }
             });
-
-            bodyTable.add(buttonA).align(Align.bottomLeft).pad(20,20,20,20);
-            bodyTable.add(buttonB).align(Align.bottomLeft).pad(20,20,20,20);
+            Table subTable= new Table(getSkin());
+            subTable.add("COST: "+ gameEvent.printCost(true) + " / " +gameEvent.printCost(false));
+            subTable.add(buttonA).align(Align.bottomLeft).pad(20,20,20,20);
+            subTable.add(buttonB).align(Align.bottomLeft).pad(20,20,20,20);
+            bodyTable.add(subTable).colspan(4).align(Align.center);
         }
         else {
-            Label message= gameLoader.superPool.obtain_label(" Accepted! ",getSkin());
-            bodyTable.add(message).align(Align.bottomLeft).pad(20,20,20,20).colspan(3);
+            ResultStruct res = gameLoader.find_resultsAnswer(gameEvent.getId());
+            if(res!=null) {
+                int k = ((int) (res.ratio * 100));
+                Label label = new Label("ML prediction: " + res.result.toUpperCase() + "\nConfidence " + k + "% \nYour Answer was : " + res.playerResult.toUpperCase(), gameLoader.getSkin("BIOS"));
+                label.setFontScale(0.5f, 0.6f);
+                label.setWrap(true);
+                if (res.result.equalsIgnoreCase(res.playerResult)) {
+                    label.setColor(Color.CHARTREUSE);
+                } else {
+                    label.setColor(Color.RED);
+                }
+
+                bodyTable.add(label).align(Align.bottomLeft).pad(20, 20, 20, 20).expandX().colspan(2);
+            }else{
+                Label label = gameLoader.superPool.obtain_label(" Done! ", getSkin());
+                bodyTable.add(label).align(Align.bottomLeft).pad(20, 20, 20, 20).expandX().colspan(2);
+            }
+
         }
         return bodyTable;
     }
-    private void handleResult(GameEvent gameEvent, boolean resultIsA){
-        gameLoader.addResult(gameEvent.getId(),resultIsA);
-
-        //if(this.isTestEvent()){gameLoader.addResult(this.getId(),true);}
-        app.toogle_IconNotification(false);
-    }
-    private void discard_event(GameEvent gameEvent) {
-        gameEvent.discardEvent();
-        currentBody.clear();
-        eventButtons.removeValue(searchButton(gameEvent.getId()),true);
-        assignedEvents.removeValue(gameEvent,true);
-        app.toogle_IconNotification(false);
-        reLoadIndex();
-
-    }
-    private void confirm_event(GameEvent gameEvent) {
-        gameEvent.acceptEvent();
-        webBodies.removeValue(currentBody,true);
-        currentBody.clear();
-        Table newBody = facebookBodyConstruct(gameEvent,gameLoader.superPool.obtain_table(getSkin()));
-        app.toogle_IconNotification(false);
-        bodySP.setActor(newBody);
-        currentBody= newBody;
-        updatePage=true;
-        updateIndex=true;
+    private void answer_event_page(GameEvent gameEvent, boolean confirm) {
+        if (confirm) {
+            webBodies.removeValue(currentBody,true);
+            currentBody.clear();
+            app.toogle_IconNotification(false);
+            updatePage=true;
+            updateIndex=true;
+            update();
+        } else {
+            currentBody.clear();
+            eventButtons.removeValue(searchButton(gameEvent.getId()), true);
+            assignedEvents.removeValue(gameEvent, true);
+            app.toogle_IconNotification(false);
+            updatePage = true;
+            reLoadIndex();
+        }
     }
     public void add_gameEvent(GameEvent gameEvent){
-        this.assignedEvents.insert(0,gameEvent);
-        updateIndex = true;
-        updatePage = true;
+        if(gameEvent.getDecade().ordinal()+1>=gameLoader.getCurrentDecade().ordinal()){
+            this.assignedEvents.insert(0,gameEvent);
+            updateIndex = true;
+            updatePage = true;
+        }
     }
 
     private Table createHead(DxM_Game.BrowserURL browserURL) {
@@ -525,10 +684,9 @@ public class AppPage extends Table implements Pool.Poolable {
 
                 break;
             case NEWS:
-                table=new Table(getSkin());
-                break;
-            case YAHOO:
-                table=new Table(getSkin());
+                table =gameLoader.superPool.obtain_table(this.getSkin());
+                table.setBackground(app.game.gameLoader.getPicture("NewsBCKGRND"));
+                table.add(gameLoader.superPool.obtain_image("NewsHead")).align(Align.left).fillX();
                 break;
             default:
                 table=new Table(getSkin());

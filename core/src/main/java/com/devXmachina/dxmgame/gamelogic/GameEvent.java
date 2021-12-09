@@ -1,28 +1,33 @@
 package com.devXmachina.dxmgame.gamelogic;
 
 import com.badlogic.gdx.math.Vector2;
-import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
-import com.badlogic.gdx.utils.Array;
 import com.devXmachina.dxmgame.DxM_Game;
 import com.devXmachina.dxmgame.GameLoader;
 
 import static com.devXmachina.dxmgame.DxM_Game.*;
+import static java.lang.Integer.parseInt;
 
 public class GameEvent {
     //-----------------------------------Main attributes
     public DxM_Game game;
+    public boolean autoPlay;
+    public boolean answer_isA;
     GameLoader gameLoader;
     //ID FORMAT =  DECADE + App + EVENT   ex 1980MA  App= M mail/W web
     String id,eventState,textBlocs,images,nextEvent,linkedEvents,gameApp,appWebPage; //String values text blocs contains Title;subtitle;longtext1;longtext2;...;buttonText1;buttonText2 or Title;Asunto;from;longtext; button text
     Boolean mainEvent,active, testEvent,sendNotification;
-    int decade,duration;
+    int decade;
+    public int duration;
     float decadeValue,eventCost_Rep,eventCost_Mon,eventValue_Rep,eventValue_Mon,progress; // TODO event cost and value recount system
     public boolean viewed;
+    private EventManager eventManager;
+    public int ml;
+    public String answer;
 
     public GameEvent(String data, DxM_Game game) {
         this.game=game;
         this.gameLoader = game.gameLoader;
-
+        this.eventManager = gameLoader.eventManager;
         parseEventData(data);
     }
     //-------------------------------------------------------------------- CONFIG
@@ -35,12 +40,13 @@ public class GameEvent {
             switch(i){
                 case 0:
                     this.id=field;
+//                    System.out.println(id);
                     break;
                 case 1:
                     this.eventState=field;
-                    if (this.eventState.equalsIgnoreCase("accepted")) {
-                        this.eventState= EventState.SUCCESS.name();
-                    }
+//                    if (this.eventState.equalsIgnoreCase("accepted")) {
+//                        this.eventState= EventState.SUCCESS.name();
+//                    }
                     break;
                 case 2:
                     this.textBlocs=field;
@@ -56,8 +62,10 @@ public class GameEvent {
                     break;
                 case 6:
                     this.gameApp=field;
+                    break;
                 case 7:
                     this.appWebPage= field;
+                    break;
                 case 8:
                     this.mainEvent= (Boolean.parseBoolean(field));
                     break;
@@ -68,10 +76,11 @@ public class GameEvent {
                     this.testEvent = (Boolean.parseBoolean(field));
                     break;
                 case 11:
-                    this.decade=(Integer.parseInt(field));
+                    this.decade=(parseInt(field));
                     break;
                 case 12:
                     this.decadeValue=(Float.parseFloat(field));
+//                    System.out.println(decade);
                     break;
                 case 13:
                     this.eventCost_Mon=(Float.parseFloat(field));
@@ -92,7 +101,17 @@ public class GameEvent {
                     this.sendNotification=(Boolean.parseBoolean(field));
                     break;
                 case 19:
-                    this.duration=Integer.parseInt(field);
+                    this.duration= parseInt(field);
+                    break;
+                case 20:
+                    this.autoPlay=Boolean.parseBoolean(field);
+//                    System.out.println(autoPlay);
+                    break;
+                case 21:
+                    this.ml=Integer.parseInt(field);
+                    break;
+                case 22:
+                    this.answer=field;
                     break;
                 default:
                     break;
@@ -101,7 +120,29 @@ public class GameEvent {
     }
     @Override
     public String toString() {
-        return (""+id+";" +eventState+";" +textBlocs+";" +images+";" +nextEvent+";" +linkedEvents+";" +gameApp+";" +appWebPage+";" +mainEvent+";" +active+";" + testEvent +";" +decade+";" +decadeValue+";" +eventCost_Mon+";" +eventCost_Rep+";" +eventValue_Mon+";" +eventValue_Rep+";" +progress+";" +sendNotification+";" +duration+"\n");
+        return (""+id+";"
+                +eventState+";" +
+                textBlocs+";" +
+                images+";" +
+                nextEvent+";" +
+                linkedEvents+";" +
+                gameApp+";" +
+                appWebPage+";" +
+                mainEvent+";" +
+                active+";" +
+                testEvent +";" +
+                decade+";" +
+                decadeValue+";" +
+                eventCost_Mon+";" +
+                eventCost_Rep+";" +
+                eventValue_Mon+";" +
+                eventValue_Rep+";" +
+                progress+";" +
+                sendNotification+";" +
+                duration+";"+
+                autoPlay+";" +
+                ml+";"+
+                answer+"\n");
     }
     //-------------------------------------------------------------------- GETTERS
     public String getId() {
@@ -120,31 +161,24 @@ public class GameEvent {
             return EventState.NULL;
     }
     public String[] getTextBlocs() {
-        return textBlocs.split("//");
+        return textBlocs.replace("&","\n").replace("#",gameLoader.getUserName()).split("//");
     }
     public String[] getImages() {
         return images.split("//");
     }
     public GameEvent getNextEvent() {
         if (!this.nextEvent.equalsIgnoreCase("NULL")){
-            GameEvent event;
-            for (int i=0;i<gameLoader.getEventList().size;i++){
-                event=gameLoader.getEventList().get(i);
-                if (event.id.equalsIgnoreCase(nextEvent)) {
-                    return event;
-                }
-            }
+            return eventManager.getGameEvent_fromMainList(this.nextEvent);
         }
         return null;
     }
-    public GameEvent getLinkedEvents() {
-        GameEvent event;
-        for (int i=0;i<gameLoader.getEventList().size;i++){
-            event=gameLoader.getEventList().get(i);
-            if(event.id.equalsIgnoreCase(linkedEvents)){return event;}
+    public GameEvent getLinkedEvent() {
+        if (!(this.linkedEvents.equalsIgnoreCase("NULL"))){
+            return eventManager.getGameEvent_fromMainList(this.linkedEvents);
         }
         return null;
     }
+
     public DesktopAppType getDesktopGameApp() {
         if(this.gameApp.equalsIgnoreCase("MAIL")){return DesktopAppType.MAIL;}
         if(this.gameApp.equalsIgnoreCase("MANAGER")){return DesktopAppType.MANAGER;}
@@ -188,8 +222,8 @@ public class GameEvent {
         else
             return EventDecade.TWENTY_TWENTIES;
     }
-    public Vector2 getEventCost() {
-        return new Vector2(eventCost_Mon,eventCost_Rep);
+    public int getEventCost(boolean money) {
+        return getCost(money);
     }
     public Vector2 getEventValue(){
         return new Vector2(eventValue_Mon,eventValue_Rep);
@@ -200,110 +234,190 @@ public class GameEvent {
     public String getTitle(){
         return this.getTextBlocs()[0];
     }
-    public Array<String> getTextBody(){
-        String[] text = this.getTextBlocs();
-        Array<String> retVal =new Array<String>();
-        retVal.ordered=true;
-        int i;
-        switch (this.getDesktopGameApp()){
-            case MAIL:
-                i=3;
-                break;
-            case BROWSER:
-            default:
-                i=2;
-                break;
-        }
-
-        for(int j =i; j<text.length;j++) {
-                retVal.add(text[j]);
-        }
-        return retVal;
-    }
-    public TextureRegionDrawable getIcon(){
-        return game.gameLoader.getPicture(this.getImages()[0]);
-    }
-    public TextureRegionDrawable getHeaderImage(){
-        return game.gameLoader.getPicture(this.getImages()[1]);
-    }
-    public TextureRegionDrawable getSignatureImage(){
-        return game.gameLoader.getPicture(this.getImages()[2]);
-    }
     private boolean haveChildEvent() {
-        if(this.getNextEvent()!=null){return true;}else{return false;}
+        return this.getNextEvent() != null;
     }
     //-------------------------------------------------------------------- SETTERS
     public void  setEventState(EventState state){
         this.eventState = state.name();
     }
     //-------------------------------------------------------------------- ACTIONS
-    public void fireEvent() {
-        //remove from queue
-        if(gameLoader.getFireEventsQueue().contains(this,true)){gameLoader.getFireEventsQueue().removeValue(this,true);}
-        //add to running events
-        gameLoader.getPendingEvents().add(this);
-        //change state
-        this.eventState= EventState.PENDING.name();
-        this.viewed=false;
-        game.updateManager(true);
-        gameLoader.saveAllData();
+    public void fireEvent_data() {
+        if(this.eventState.equalsIgnoreCase("NULL")) {
+            this.viewed = false;
+        }
+        if(this.getDesktopGameApp().equals(DesktopAppType.CONSOLE)){
+            answer_isA=true;
+        }
     }
     public void acceptEvent(){
-        this.eventState = EventState.ACCEPTED.name();
-        gameLoader.getPendingEvents().removeValue(this,true);
-        gameLoader.getRunningEvents().add(this);
+        this.eventManager.update_gameEvent(this,EventState.ACCEPTED);
             if(duration>0){
-               //FIX
+                if(gameLoader.isDebugMode()||gameLoader.isAutoPlay()){forceCompleteEvent();}
             }else{
                 forceCompleteEvent();
             }
+            if(this.isDoubleAnswer()) {
+                if (this.nextEvent.equalsIgnoreCase(this.linkedEvents)&&this.answer_isA) {
+                    gameLoader.updateCurrentMoney(eventCost_Mon, false);
+                    gameLoader.updateCurrentReputation(eventCost_Rep, false);
+                }
+            }else{
 
-        if(gameLoader.isDebugMode()){forceCompleteEvent();}
+                gameLoader.updateCurrentMoney(eventCost_Mon, false);
+                gameLoader.updateCurrentReputation(eventCost_Rep, false);
+            }
         gameLoader.saveAllData();
         game.updateManager(true);
     }
     public void discardEvent(){
-        this.eventState = EventState.DISCARDED.name();
-        gameLoader.getPendingEvents().removeValue(this,true);
+        this.eventManager.update_gameEvent(this,EventState.DISCARDED);
         game.updateManager(true);
-       // if(this.isTestEvent()){gameLoader.addResult(this.getId(),false);}
     }
     public void progressEvent(){
         this.progress += 0.1f;
         if(this.progress >= duration){
+            if(this.getDesktopGameApp().equals(DesktopAppType.CONSOLE)) {
+                eventManager.activate_nextEvent(this, true);
+            }
             completeEvent();
+        }
+        else {
+
+            if(gameLoader.isAutoPlay()){this.progress=this.duration-0.1f;}
         }
         game.updateManager(false);
     }
     public void completeEvent(){
-        this.eventState = EventState.SUCCESS.name();
-        gameLoader.getRunningEvents().removeValue(this,true);
-        gameLoader.getDoneEvents().add(this);
-        if(this.sendNotification){game.getDesktop().sendNotification(this,"Tasca Completada", this.getTitle()+"completada\n \n ");}
-
-        GameEvent nextEvent = gameLoader.getGameEvent(this.nextEvent);
-        if(nextEvent!=null){
-            if(nextEvent.duration==0) {
-                gameLoader.getFireEventsQueue().insert(0,getNextEvent());
-                game.getDesktop().forceTimeTick();
-            }else{
-                gameLoader.getFireEventsQueue().add(getNextEvent());
-
-            }
-        }
-//        game.getDesktop().getApp(this.getDesktopGameApp()).updateWindow(this.getAppWebPage());
+        eventManager.update_gameEvent(this,EventState.SUCCESS);
+        if(this.sendNotification){game.getDesktop().sendNotification(this,"Tasca Completada", this.getTitle()+"\n  Beneficis:       \n"+ printValue(true)+" "+printValue(false) + " \n ");}
+        if(!this.gameApp.equalsIgnoreCase("CONSOLE")){game.getDesktop().getApp(this.getDesktopGameApp()).updateWindow();}
         gameLoader.increaseDecadeProgress(this.decadeValue);
+        if(this.isDoubleAnswer()) {
+            if (this.nextEvent.equalsIgnoreCase(this.linkedEvents)&&this.answer_isA) {
+                gameLoader.updateCurrentMoney(eventValue_Mon, true);
+                gameLoader.updateCurrentReputation(eventValue_Rep, true);
+            }
+        }else{
+
+            gameLoader.updateCurrentMoney(eventValue_Mon, true);
+            gameLoader.updateCurrentReputation(eventValue_Rep, true);
+        }
         gameLoader.setSaveGame(true);
         game.updateManager(true);
         gameLoader.saveAllData();
 
     }
     public void forceCompleteEvent() {
-        this.progress=1;
-        completeEvent();
+        this.progress=duration-0.1f;
     }
     //-------------------------------------------------------------------- XXXXXX
     public void dispose() {
         //TODO
+    }
+
+    public String printCost(boolean money) {
+        int variation;
+        if(money) {
+            if (this.eventCost_Mon > 10) {
+                variation = (int) this.eventCost_Mon;
+            } else {
+                variation = (int) (gameLoader.getCurrentMoney() * this.eventCost_Mon);
+            }
+            return "-"+variation+" $";
+        }
+        else{
+            if (this.eventCost_Rep > 10) {
+                variation = (int) this.eventCost_Rep;
+            } else {
+                variation = (int) (gameLoader.getCurrentReputation() * this.eventCost_Rep);
+            }
+            return "-"+variation+" *";
+        }
+    }
+    public int getCost(boolean money) {
+        int variation;
+        if(money) {
+            if (this.eventCost_Mon > 10) {
+                variation = (int) this.eventCost_Mon;
+            } else {
+                variation = (int) (gameLoader.getCurrentMoney() * this.eventCost_Mon);
+            }
+            return variation;
+        }
+        else{
+            if (this.eventCost_Rep > 10) {
+                variation = (int) this.eventCost_Rep;
+            } else {
+                variation = (int) (gameLoader.getCurrentReputation() * this.eventCost_Rep);
+            }
+            return variation;
+        }
+    }
+    public String printValue(boolean money) {
+        int variation;
+        if(money) {
+            if (this.eventValue_Mon > 10) {
+                variation = (int) this.eventValue_Mon;
+            } else {
+                variation = (int) (gameLoader.getCurrentMoney() * this.eventValue_Mon);
+            }
+            return "+"+variation+" $";
+        }
+        else{
+            if (this.eventValue_Rep > 10) {
+                variation = (int) this.eventValue_Rep;
+            } else {
+                variation = (int) (gameLoader.getCurrentReputation() * this.eventValue_Rep);
+            }
+            return "+"+variation+" *";
+        }
+    }
+
+    public boolean isDoubleAnswer(){
+        return this.getLinkedEvent() != null;
+    }
+    public boolean isVirus(){
+        return this.nextEvent.equalsIgnoreCase("VIRUS");
+    }
+    public boolean handle_eventAnswer(boolean isA){
+        if(isA){this.answer="a";}else{this.answer="b";}
+        if(isTestEvent()){
+            ResultStruct res =  gameLoader.find_resultsAnswer(this.id);
+            if(res!=null){
+                if(isA){res.playerResult="a";}else{res.playerResult="b";}
+            }else{
+                System.out.println("ERR L396 GAMEEVENT");
+            }
+        }
+        if(isVirus()){   //IS A VIRUS
+            if(isA){
+                game.executeVirus();
+                acceptEvent();
+                eventManager.activate_nextEvent(this,false);
+                return true;
+            }else{
+                discardEvent();
+                return false;
+            }
+        }else{          //NORMAL EVENT
+            if(isDoubleAnswer()){      //----------------------------DOUBLE ANSWER
+                this.answer_isA=isA;
+                acceptEvent();
+                eventManager.activate_nextEvent(this,isA);
+                return true;
+            }else{                          //-----------------------SIMPLE ANSWER
+                if(isA){
+                    acceptEvent();
+                    eventManager.activate_nextEvent(this, true);
+                }
+                else {
+                    discardEvent();
+                }
+
+                return isA;
+            }
+
+        }
     }
 }

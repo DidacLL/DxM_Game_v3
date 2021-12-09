@@ -79,7 +79,7 @@ public class BrowserWindow extends AppWindow{
             @Override
             public void changed(ChangeEvent event, Actor actor) {
                 int index = urlBar.getSelectedIndex()+1;
-                if(index>=urlBar.getItems().size){index= urlBar.getItems().size-1;};
+                if(index>=urlBar.getItems().size){index= urlBar.getItems().size-1;}
                     urlBar.setSelectedIndex(index);
             }
         });
@@ -93,8 +93,6 @@ public class BrowserWindow extends AppWindow{
         this.appContentPages.add(github);
         wiki=gameLoader.superPool.obtain_appPage(DxM_Game.BrowserURL.WIKI,app);
         this.appContentPages.add(wiki);
-        yahoo=gameLoader.superPool.obtain_appPage( DxM_Game.BrowserURL.YAHOO,app);
-        this.appContentPages.add(yahoo);
         news=gameLoader.superPool.obtain_appPage( DxM_Game.BrowserURL.NEWS,app);
         this.appContentPages.add(news);
         currentAppPage=blank;
@@ -144,12 +142,6 @@ public class BrowserWindow extends AppWindow{
                         scrollPane.setActor(news);
                         currentAppPage= news;
                         break;
-                    case YAHOO:
-                        yahoo.updatePage=true;
-                        yahoo.update();
-                        scrollPane.setActor(yahoo);
-                        currentAppPage=yahoo;
-                        break;
                 }
             }
         });
@@ -160,19 +152,14 @@ public class BrowserWindow extends AppWindow{
         switch (gameLoader.getCurrentDecade()){
 
             case SEVENTIES:
+            case EIGHTIES:
+            case NINETIES:
                 selectBox.setItems(DxM_Game.BrowserURL.BLANK, DxM_Game.BrowserURL.NEWS, DxM_Game.BrowserURL.WIKI);
                 break;
-            case EIGHTIES:
-                break;
-            case NINETIES:
-                selectBox.setItems(DxM_Game.BrowserURL.BLANK, DxM_Game.BrowserURL.NEWS, DxM_Game.BrowserURL.WIKI,DxM_Game.BrowserURL.YAHOO );
-                break;
             case NOUGHTIES:
-                selectBox.setItems(DxM_Game.BrowserURL.BLANK, DxM_Game.BrowserURL.NEWS, DxM_Game.BrowserURL.WIKI,DxM_Game.BrowserURL.YAHOO, DxM_Game.BrowserURL.FACEBOOK);
+                selectBox.setItems(DxM_Game.BrowserURL.BLANK, DxM_Game.BrowserURL.NEWS, DxM_Game.BrowserURL.WIKI, DxM_Game.BrowserURL.FACEBOOK);
                 break;
             case TWENTY_TENS:
-                selectBox.setItems(DxM_Game.BrowserURL.BLANK, DxM_Game.BrowserURL.NEWS, DxM_Game.BrowserURL.WIKI,DxM_Game.BrowserURL.YAHOO, DxM_Game.BrowserURL.FACEBOOK, DxM_Game.BrowserURL.GITHUB);
-                break;
             case TWENTY_TWENTIES:
                 selectBox.setItems(DxM_Game.BrowserURL.BLANK, DxM_Game.BrowserURL.NEWS, DxM_Game.BrowserURL.WIKI,DxM_Game.BrowserURL.FACEBOOK,DxM_Game.BrowserURL.GITHUB);
                 break;

@@ -1,129 +1,111 @@
 package com.devXmachina.dxmgame;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Preferences;
-import com.badlogic.gdx.assets.AssetManager;
 import com.badlogic.gdx.graphics.Texture;
+import com.badlogic.gdx.scenes.scene2d.ui.Dialog;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
+import com.badlogic.gdx.utils.Align;
 import com.badlogic.gdx.utils.Array;
-import com.devXmachina.dxmgame.gamelogic.GameEvent;
-import com.devXmachina.dxmgame.gamelogic.SuperPool;
+import com.devXmachina.dxmgame.desktopActors.ManagerWindow;
+import com.devXmachina.dxmgame.gamelogic.*;
 
 public class GameLoader {
-    private static final String INIT_DATA = "1970CONSOLE002;NULL;Welcome to your brand new personal computer!!//  //   // Check the text file below// to view the game information// and how to play//  // starting game? // // ;NULL;1970CONSOLE003;NULL;CONSOLE;CONSOLE;true;false;false;1970;1;0;0;100;100;0;false;1\n" +
-            "1970CONSOLE003;NULL;Setting regional config?// languaje: CATALA  current_date: 4/20/1978_//  Estem configurant els ultims detalls... // per jugar nomes has d'estar //atent a les notificacions  que aniran apareixent-->>;NULL;1970CONSOLE004;NULL;CONSOLE;CONSOLE;false;false;false;1970;1;0;0;100;100;0;false;0\n" +
-            "1970CONSOLE004;NULL;Exacte! //A traves d'aquestes notificacions podras //coneixer les noves oportunitas// i decisions per avancar en la historia;NULL;1970CONSOLE005;NULL;CONSOLE;CONSOLE;false;false;false;1970;1;0;0;100;100;0;true;0\n" +
-            "1970CONSOLE005;NULL;\"Consulta el fitxer de text per mes detalls// o directament prova de navegar per les diferents aplicacions.// A l'administrador de tasques hi tens tota la informaci¢//de la partida actual i de la IA // tamb\u0082 hi pots activar el mode \"\"DEBUG\"\" o incl£s//activar el mode de joc autom\u0085tic guiat per IA \";NULL;1970MAIL006;NULL;CONSOLE;CONSOLE;false;false;false;1970;0;0;0;100;100;0;false;0\n" +
-            "1970MAIL006;NULL;GAME developer//Aquest es el teu primer mail//Ey! Benvingut, aquest es el teu primer correu, amb correus com aquests podr\u0085s acceptar o rebutjar projectes, o b\u0082 escollir entre dues opcions i segons el que decideixis, la historia evolucionar\u0085 de manera diferent.//Entesos//Spam//NOU CORREU!;MAIL//MAILB;NULL;NULL;MAIL;MAIL;false;false;false;1970;1;0;0;0;0;0;true;3";
-
-    private DxM_Game game;
-    private Preferences preferences;
-    private Array<GameEvent> unusedGameEvents;
-    private AssetManager assetManager;
+    public DxM_Game game;
+    private final Preferences preferences;
     public SuperPool superPool;
     protected DxM_Game.EventDecade currentDecade;
     private float decadeProgress;
     protected int currentMoney, currentReputation;
 
     private String userName;
-    private String gameResults, testResults;
-    private Array<GameEvent> eventList, fireEventsQueue, runningEvents, doneEvents, pendingEvents;
     public boolean savedData;
-    private Skin desktopSkin, menuSkin, biosSkin;
-    private boolean autoPlay, saveGame, debugMode;
-    private boolean sound;
+    private final Skin desktopSkin, menuSkin, biosSkin, blueDeskSkin;
+    private boolean autoPlay, saveGame, debugMode, sound;
+    public boolean consoleBusy, endGame;
+    public EventManager eventManager;
+    public String[] wiki_txt, test_txt;
+    public String readMe_txt;
+    //--------------------------------------------------------------------Machine_Learning
+    public String[] testAnswer;
+    public Array<ResultStruct> resultStructArray;
+    private String testFinalResults;
 
     public GameLoader(DxM_Game game) {
         this.game = game;
         preferences = Gdx.app.getPreferences("IAGame_Preferences");
-        assetManager = new AssetManager();
         menuSkin = new Skin(Gdx.files.internal("ui/uiskin.json"));
         desktopSkin = new Skin(Gdx.files.internal("os8ui/OS Eight.json"));
+        blueDeskSkin = new Skin(Gdx.files.internal("os8ui/OS Eight.json"));
         biosSkin = new Skin(Gdx.files.internal("commodore64ui/uiskin.json"));
         getSavedData();
         createArrays();
         loadImages();
         loadSounds();
         superPool = new SuperPool(this, game);
+//        testWeka();
     }
 
     //-------------------------------------------------------------------------CONSTRUCT
     private void createArrays() {
-        unusedGameEvents = new Array<GameEvent>();
-        eventList = new Array<GameEvent>();
-        pendingEvents = new Array<GameEvent>();
-        doneEvents = new Array<GameEvent>();
-        fireEventsQueue = new Array<GameEvent>();
-        runningEvents = new Array<GameEvent>();
+        eventManager = new EventManager(this, game);
+        wiki_txt = (Gdx.files.internal("txt/wiki.txt").readString()).split("\\r?\\n");
+        test_txt = (Gdx.files.internal("txt/test.txt").readString()).split("\\r?\\n");
+        readMe_txt = (Gdx.files.internal("txt/readMe.txt").readString());
+        resultStructArray = new Array<>();
     }
     private void loadImages() {
     }
     private void loadSounds() {
     }
+
     //-------------------------------------------------------------------------START
     public void start() {
         load_EventsData();
     }
+
     private void load_EventsData() {
         String data = "";
         if (!savedData) {
-            data = INIT_DATA;
+//            data=INIT_DATA;
+            data = (Gdx.files.internal("txt/EventGameData2.txt").readString());
             autoPlay = false;
-            markTo_SaveData();
         } else {
             data = preferences.getString("GameEvent_Data");
         }
         String[] EventArray = data.split("\\r?\\n");
+        TreeScript treeTest= new TreeScript();
         for (String dataLine : EventArray) {
             if (dataLine.contains("//")) {
                 GameEvent event = new GameEvent(dataLine, this.game);
-                event.viewed=true;
-                eventList.add(event);
-                parse_eventData(event);
+                event.viewed = true;
+                eventManager.addEvent_toMainList(event);
+                if (event.isTestEvent()) {
+                        if(event.ml>0){
+                            ResultStruct aux = treeTest.get_mlAnswer(this,event);
+                            if(event.answer!=null){aux.playerResult=event.answer;}
+                            resultStructArray.add(aux);
+                        }
+
+                        eventManager.gameResults.add(event.getId() + ":N");
+
+                }
             }
         }
-
-        if(!savedData){loadDecadeEvents();}
+        if (savedData) {
+            String[] strArr = preferences.getString("GameResults").split("\n");
+            for (String eResult : strArr) {
+                eventManager.gameResults.add(eResult);
+            }
+        }
         game.updateManager(true);
 
     }
-    public void parse_eventData(GameEvent event) {
-        if (event.isActive()) {
-            if (!event.getEventState().equals(DxM_Game.EventState.DISCARDED)) {
-                switch (event.getEventState()) {
-                    case NULL:
-                        this.fireEventsQueue.add(event);
-                        break;
-                    case PENDING:
-                        this.pendingEvents.add(event);
-                        game.getDesktop().addEvent(event, event.getDesktopGameApp());
-                        break;
-                    case ACCEPTED:
-                        event.setEventState(DxM_Game.EventState.SUCCESS);
-                        this.doneEvents.add(event);
-                        game.getDesktop().addEvent(event, event.getDesktopGameApp());
-                        if(event.mustSendNotification()){game.getDesktop().sendNotification(event,"Task complete!", "Task "+event.getTitle()+"\n was successfully done");}
-                        increaseDecadeProgress(event.getDecadeValue());
-                        setSaveGame(true);
-                        break;
-                    case SUCCESS:
-                        game.getDesktop().addEvent(event, event.getDesktopGameApp());
-                        this.doneEvents.add(event);
-                        break;
-                    default:
-                        throw new IllegalStateException("Unexpected value: " + event.getEventState());
-                }
-
-            }
-        } else {
-            if (event.getDecade().equals(currentDecade)) {
-                unusedGameEvents.add(event);
-            }
-        }
 
 
-    }
     //-------------------------------------------------------------------------DATA & PREFERENCES
     private void getSavedData() {
         if (preferences.contains("GameEvent_Data")) {
@@ -132,9 +114,12 @@ public class GameLoader {
             currentDecade = DxM_Game.EventDecade.valueOf(preferences.getString("currentDecade"));
             decadeProgress = preferences.getFloat("decadeProgress");
             currentReputation = preferences.getInteger("currentReputation");
-            gameResults = preferences.getString("gameResults");
             userName = preferences.getString("userName");
-            testResults = preferences.getString("testResults");
+
+            testFinalResults = preferences.getString("testResults");
+            testAnswer = testFinalResults.split("\n");
+
+
             sound = preferences.getBoolean("sound");
             debugMode = preferences.getBoolean("debug");
         } else {
@@ -142,260 +127,263 @@ public class GameLoader {
             currentMoney = 0;
             currentDecade = DxM_Game.EventDecade.SEVENTIES;
             decadeProgress = 0.f;
-            currentReputation = 0;
-            gameResults = "";
+            currentReputation = 100;
+            testFinalResults="";
             userName = "";
-            testResults = "";
         }
     }
+
     public void saveAllData() {
-        StringBuilder stringBuilder = new StringBuilder();
-        for (GameEvent event : eventList) {
-            stringBuilder.append(event.toString());
-        }
-        preferences.putString("GameEvent_Data", stringBuilder.toString());
+        preferences.putString("GameEvent_Data", eventManager.toString());
         preferences.putInteger("currentMoney", currentMoney);
         preferences.putString("currentDecade", currentDecade.name());
         preferences.putFloat("decadeProgress", decadeProgress);
         preferences.putInteger("currentReputation", currentReputation);
-        preferences.putString("results", gameResults);
         preferences.putString("userName", userName);
-        preferences.putString("testResults", testResults);
+        preferences.putString("testResults", testFinalResults);
         preferences.putBoolean("sound", sound);
         preferences.putBoolean("debug", debugMode);
         preferences.flush();
         saveGame = false;
+        eventManager.save_resultsArray(preferences);
     }
+
     public void clearPreferences() {
         preferences.clear();
         preferences.flush();
     }
+
     public void markTo_SaveData() {
         saveGame = true;
     }
+
     //-------------------------------------------------------------------------GAME EVENTS
-    public void fire_gameEvent() {
-        if(fireEventsQueue.notEmpty()) {
-            GameEvent newGameEvent = fireEventsQueue.get(0);
-            newGameEvent.fireEvent();
-            System.out.println("fired event : "+ newGameEvent.getId());
-            game.getDesktop().addEvent(newGameEvent, newGameEvent.getDesktopGameApp());
-            saveGame = true;
-            if(newGameEvent.getDesktopGameApp()!= DxM_Game.DesktopAppType.CONSOLE){game.getDesktop().getApp(newGameEvent.getDesktopGameApp()).toogle_IconNotification(true);}
-            if (newGameEvent.mustSendNotification()) {
-                game.getDesktop().sendNotification(newGameEvent, "New Task!!!", "Hey, " + userName + ". \n Take an eye on\n this history event:");
-            }
-        }
-    }
     public void loadDecadeEvents() {
-        DxM_Game.EventDecade checkDecade;
-        if (currentDecade == null) {
-            currentDecade = DxM_Game.EventDecade.SEVENTIES;
-        }
-        checkDecade=currentDecade;
-        for (GameEvent gameEvent : eventList) {
-            if ((gameEvent.getDecade().equals(checkDecade) &&
-                    (gameEvent.isMainEvent() && (!(gameEvent.isActive())) || (!gameEvent.isMainEvent()) && gameEvent.isActive()))) {
-                gameEvent.setActive(true);
-                parse_eventData(gameEvent);
-            }
-
-        }
-
+        eventManager.activate_DecadeEvents(currentDecade);
+        saveAllData();
     }
-    public GameEvent getGameEvent(String id) {
-        for (GameEvent event : eventList) {
-            if (event.getId().equalsIgnoreCase(id)) {
-                return event;
-            }
-        }
-        return null;
-    }
+
     //-------------------------------------------------------------------------GAME PROGRESS
     public void updateGameData() {
         if (getDecadeProgress() >= 4) {
+            decadeProgress = 0.f;
             nextDecade();
-        }
-        else{
-            if(autoPlay){autoPlay_currentDecade();}
-            else{
-                GameEvent gameEvent;
-                for(int i=0; i<runningEvents.size;i++){
-                    gameEvent=runningEvents.get(i);
-                    gameEvent.progressEvent();
-                }
-                fire_gameEvent();
+        } else {
+            eventManager.update_runningEvents();
+            if (eventManager.must_fireEvent()) {
+                eventManager.eventTicker = 11;
             }
+            if (eventManager.must_fireEvent()) {
+                eventManager.fire_nextEvent();
+            }
+
         }
         //TODO
     }
+
+    //    private void clean_FireEventsQueue() {
+//        for(int i=0;i<fireEventsQueue.size;i++){
+//            if(!(fireEventsQueue.get(i).getDecade().equals(currentDecade))){
+//                fireEventsQueue.removeIndex(i);
+//            }
+//        }
+//    }
     public void nextDecade() {
         switch (currentDecade) {
             case SEVENTIES:
-                currentDecade = DxM_Game.EventDecade.EIGHTIES;
+                this.currentDecade = DxM_Game.EventDecade.EIGHTIES;
                 autoPlay = false;
-                decadeProgress=0;
                 loadDecadeEvents();
                 markTo_SaveData();
                 break;
             case EIGHTIES:
-                currentDecade = DxM_Game.EventDecade.NINETIES;
+                this.currentDecade = DxM_Game.EventDecade.NINETIES;
                 autoPlay = false;
-                decadeProgress=0;
                 loadDecadeEvents();
                 markTo_SaveData();
                 break;
             case NINETIES:
-                currentDecade = DxM_Game.EventDecade.NOUGHTIES;
+                this.currentDecade = DxM_Game.EventDecade.NOUGHTIES;
                 autoPlay = false;
-                decadeProgress=0;
                 loadDecadeEvents();
                 markTo_SaveData();
                 break;
             case NOUGHTIES:
-                currentDecade = DxM_Game.EventDecade.TWENTY_TENS;
+                this.currentDecade = DxM_Game.EventDecade.TWENTY_TENS;
                 autoPlay = false;
-                decadeProgress=0;
                 loadDecadeEvents();
                 markTo_SaveData();
                 break;
             case TWENTY_TENS:
-                currentDecade = DxM_Game.EventDecade.TWENTY_TWENTIES;
+                this.currentDecade = DxM_Game.EventDecade.TWENTY_TWENTIES;
                 autoPlay = false;
-                decadeProgress=0;
                 loadDecadeEvents();
                 markTo_SaveData();
                 break;
             case TWENTY_TWENTIES:
                 autoPlay = false;
-                decadeProgress=0;
                 markTo_SaveData();
                 endGame();
                 break;
             default:
                 break;
         }
-        game.desktop.getBrowserWindow().setSelectBox_options();
+//        clean_FireEventsQueue();
+        game.getDesktop().getBrowserWindow().setSelectBox_options();
     }
+
     //Called when you end the last event. it should show your results
-    private void endGame() {
-        //TODO
+    public void endGame() {
+        endGame = true;
+        game.setGameState(DxM_Game.GameState.MENU_MODE);
+        Dialog dialog = new Dialog(" GAME COMPLETE! ", biosSkin, "dialog-modal") {
+            protected void result(Object object) {
+                if (object.equals(true)) {
+                    clearPreferences();
+                    game.reset();
+                }
+            }
+        };
+        dialog.getTitleTable().reset();
+        Label label = new Label("  CONGRATULATIONS!  ", biosSkin, "title");
+        label.setAlignment(Align.bottom);
+        dialog.getTitleTable().add(label).expand();
+        dialog.text("\n \n \n           GAME COMPLETE!!!     \n \n \n   Do you want to start a new game?  \n \n    this option cannot be undone  \n \n \n       You can also keep your  \n      game data and review all \n          the game info\n \n \n")
+                .button(" NEW GAME ", true).button(" DESKTOP ", false)
+                .key(Input.Keys.ENTER, true).key(Input.Keys.ESCAPE, false).show(game.getMenu()).align(Align.center);
+        game.getCurrentStage().addActor(dialog);
+
     }
-    public void autoPlay_currentDecade() {
-    }
+
     //-------------------------------------------------------------------------Getters_&_Setters
-    public Array<GameEvent> getUnusedGameEvents() {
-        return unusedGameEvents;
-    }
     public DxM_Game.EventDecade getCurrentDecade() {
         return currentDecade;
     }
+
     public float getDecadeProgress() {
         return decadeProgress;
     }
+
     public int getCurrentMoney() {
         return currentMoney;
     }
+
     public void updateCurrentMoney(float value, boolean increase) {
-        if (increase) {
-            this.currentMoney += (int) currentMoney * value;
+        int variation;
+        if (value > 10) {
+            variation = (int) value;
         } else {
-            this.currentMoney -= (int) currentMoney * value;
+            variation = (int) (currentMoney * value);
+        }
+        if (increase) {
+            this.currentMoney += variation;
+        } else {
+            this.currentMoney -= variation;
         }
     }
+
     public int getCurrentReputation() {
         return currentReputation;
     }
+
     public void updateCurrentReputation(float value, boolean increase) {
-        if (increase) {
-            this.currentReputation += (int) currentReputation * value;
+        int variation;
+        if (value > 10) {
+            variation = (int) value;
         } else {
-            this.currentReputation -= (int) currentReputation * value;
+            variation = (int) (currentReputation * value);
+        }
+        if (increase) {
+            this.currentReputation += variation;
+        } else {
+            this.currentReputation -= variation;
         }
     }
+
     public String getUserName() {
         return userName;
     }
+
     public void setUserName(String userName) {
         this.userName = userName;
     }
-    public String getGameResults() {
-        return gameResults;
-    }
-    public void addGameResults(String gameResults) {
-        this.gameResults = gameResults;
-    }
-    public String getTestResults() {
-        return testResults;
-    }
-    public void addTestResults(String testResults) {
-        this.testResults += testResults;
-    }
-    public Array<GameEvent> getEventList() {
-        return eventList;
-    }
-    public Array<GameEvent> getFireEventsQueue() {
-        return fireEventsQueue;
-    }
-    public Array<GameEvent> getRunningEvents() {
-        return runningEvents;
-    }
-    public Array<GameEvent> getDoneEvents() {
-        return doneEvents;
-    }
-    public Array<GameEvent> getPendingEvents() {
-        return pendingEvents;
-    }
+
     public TextureRegionDrawable getPicture(String name) {
         return new TextureRegionDrawable(new Texture(Gdx.files.internal("img/" + name + ".png")));
         //TODO change that loadAtRunTime method to assetloader by atlas
     }
+
     public Skin getSkin(String name) {
         if (name.equalsIgnoreCase("DESKTOP")) {
             return this.desktopSkin;
         } else if (name.equalsIgnoreCase("BIOS")) {
             return this.biosSkin;
-        } else if(name.equalsIgnoreCase("BIOS2")){
+        } else if (name.equalsIgnoreCase("BIOS2")) {
             return new Skin(Gdx.files.internal("commodore64ui/uiskin.json"));
-        }else {
+        } else if (name.equalsIgnoreCase("BLUEDESK")) {
+            return this.blueDeskSkin;
+        } else {
             return this.menuSkin;
         }
     }
+
     public boolean isDebugMode() {
         return debugMode;
     }
+
     public void setDebugMode(boolean debugMode) {
         this.debugMode = debugMode;
     }
-    public boolean isSaveGame() {
-        return saveGame;
-    }
+
+
     public void setSaveGame(boolean saveGame) {
         this.saveGame = saveGame;
     }
+
     public boolean isAutoPlay() {
         return autoPlay;
     }
+
     public void setAutoPlay(boolean autoPlay) {
         this.autoPlay = autoPlay;
     }
+
     public void increaseDecadeProgress(float decadeValue) {
         this.decadeProgress += decadeValue;
     }
+
     public boolean isSoundActive() {
         return this.sound;
     }
+
     public void setSound(boolean active) {
         this.sound = active;
     }
-    public void addResult(String id, boolean result) {
-        addGameResults(id + ":" + Boolean.toString(result) + "\n");
-        markTo_SaveData();
-        //TODO handle A/B RESULTS
-    }
 
     public void dispose() {
-        //TODO
+
+    }
+
+    public void get_autoDecadeLog(String toString) {
+        ((ManagerWindow) game.getDesktop().getTaskManager().appWindow).get_autoDecadeLog(toString);
+    }
+
+
+    public void addTestResults(String[] results) {
+        testFinalResults = "";
+        testAnswer = results;
+        for (String str : results) {
+            testFinalResults += str + "\n";
+        }
+    }
+    public ResultStruct find_resultsAnswer(String id){
+        for(ResultStruct res: resultStructArray){
+            if(res.gameEvent_id.equalsIgnoreCase(id)){
+                return res;
+            }
+        }
+        return null;
     }
 }
+
 

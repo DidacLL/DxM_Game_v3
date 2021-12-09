@@ -1,16 +1,11 @@
 package com.devXmachina.dxmgame;
-
 import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.utils.viewport.FitViewport;
-import com.devXmachina.dxmgame.desktopActors.ConsoleWindow;
 import com.devXmachina.dxmgame.gamelogic.PlayerData;
-import com.devXmachina.dxmgame.screens.GameDesktop;
-import com.devXmachina.dxmgame.screens.GameMenu;
-import com.devXmachina.dxmgame.screens.NewGameMenu;
-
+import com.devXmachina.dxmgame.screens.*;
 /**XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX__DEV_X_MACHINA__XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
  *            LibGDX_Framework
  *            @see com.badlogic.gdx
@@ -24,13 +19,13 @@ import com.devXmachina.dxmgame.screens.NewGameMenu;
  *XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
  */
 /** {@link com.badlogic.gdx.ApplicationListener} implementation shared by all platforms. */
+
 public class DxM_Game extends ApplicationAdapter {
 	//----------------------------------- Game CONSTANTS
 	public static final int MAXWIN_WIDTH = 640;
 	public static final int MAXWIN_HEIGHT = 460;
 	public static final int RESTWIN_WIDTH = 320;
 	public static final int RESTWIN_HEIGHT = 230;
-
 
 	//----------------------------------- ENUM DEFINITIONS
 	public enum EventState {NULL, PENDING, ACCEPTED, DISCARDED, SUCCESS}
@@ -58,10 +53,10 @@ public class DxM_Game extends ApplicationAdapter {
 			}
 		}
 	}
-	public enum GameState {DESKTOP_MODE, WORLD_MODE, MENU_MODE, NEW_GAME}
+	public enum GameState {DESKTOP_MODE, MENU_MODE, NEW_GAME, VIRUS, AUTO_PLAY}
 	public enum DesktopAppType {MAIL, BROWSER, MANAGER,NOTEPAD,CONSOLE}
 	public enum BrowserURL {
-		FACEBOOK, GITHUB, BLANK, WIKI, MAIL, NEWS, YAHOO, MANAGER;
+		FACEBOOK, GITHUB, BLANK, WIKI, MAIL, NEWS, MANAGER, CONSOLE;
 
 
 		@Override
@@ -79,27 +74,25 @@ public class DxM_Game extends ApplicationAdapter {
 					return "www.msn.hotmail.com";
 				case NEWS:
 					return "www.dxm-news.feed.rss";
-				case YAHOO:
-					return "http://akebono․stanford․edu/yahoo";
 				default:
 					return "err_";
 			}
 		}
 	}
-
 	//----------------------------------------------------------------------------------------------ATTRIBUTES
 	private GameState gameState;
 	public float renderCounter;
 	// ------------STAGES-------------
 	public FitViewport mainViewport;
-	public GameDesktop desktop;
+	private GameVirus virus;
+	private GameDesktop desktop;
+	private AutoPlayScreen autoPlayScreen;
 	private GameMenu menu;
 	public GameLoader gameLoader;
 	private NewGameMenu newGameMenu;
 	private Stage currentStage;
 	//-------------PLAYER DATA--------------
 	public PlayerData data;
-
 	//----------------------------------------------------------------------------------------------START METHODS
 	@Override
 	public void create() {
@@ -117,10 +110,7 @@ public class DxM_Game extends ApplicationAdapter {
 		} else {
 			start_desktop();
 			menu.start();
-//			gameLoader.schedule_eventsCheck();
 		}
-
-
 	}
 	public void start_desktop() {
 		desktop = new GameDesktop(mainViewport, this);
@@ -128,7 +118,6 @@ public class DxM_Game extends ApplicationAdapter {
 		desktop.start();
 		gameLoader.start();
 	}
-
 	//----------------------------------------------------------------------------------------------UPDATE METHODS
 	@Override
 public void render() {
@@ -137,7 +126,6 @@ public void render() {
 		try {
 			currentStage = getCurrentStage();
 		} catch (Exception e) {
-			System.out.println(e);
 			setGameState(GameState.MENU_MODE);
 			currentStage=menu;
 		}
@@ -150,7 +138,6 @@ public void render() {
 		this.menu.setNewGame(false);
 		this.menu.start();
 	}
-
 	//----------------------------------------------------------------------------------------------UTILS METHODS
 	//Returns the current active screen depending on the GameState
 	public Stage getCurrentStage() {
@@ -161,6 +148,10 @@ public void render() {
 				return menu;
 			case DESKTOP_MODE:
 				return desktop;
+			case VIRUS:
+				return virus;
+			case AUTO_PLAY:
+				return autoPlayScreen;
 			default:
 				throw new IllegalStateException("Unexpected value: " + this.gameState);
 		}
@@ -176,7 +167,6 @@ public void render() {
 	public GameMenu getMenu() {
 		return this.menu;
 	}
-
 	public NewGameMenu getNewGame_stage() {
 		return this.newGameMenu;
 	}
@@ -207,5 +197,15 @@ public void render() {
 	public void updateManager(boolean full){
 		desktop.getTaskManager().updateManager(full);
 
+	}
+
+	public void executeAutoplay() {
+		this.autoPlayScreen = new AutoPlayScreen(mainViewport,this,gameLoader.getCurrentDecade());
+		setGameState(GameState.AUTO_PLAY);
+	}
+
+	public void executeVirus(){
+		this.virus=new GameVirus(mainViewport,this);
+		setGameState(GameState.VIRUS);
 	}
 }

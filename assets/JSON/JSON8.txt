@@ -1,0 +1,48 @@
+{
+	"id": "decision1",
+	"EndofTree": "false",
+	"pathId": "",
+	"subBranches": [
+		{
+			"EndofTree": "true",
+			"pathId": "a",
+			"branchEnd": "b",
+			"ratio": "7.0/1.0"
+		},
+	
+		{
+			"id" : "decision3",
+			"EndofTree" : "false",
+			"pathId" : "b",
+			"subBranches" : [
+				{
+					"id" : "decision4",
+					"EndofTree" : "false",
+					"pathId" : "a",
+					"subBranches" : [
+						{
+							"EndofTree": "true",
+							"pathId": "a",
+							"branchEnd": "a",
+							"ratio": "4.0/1.0"
+						},
+						{
+							"EndofTree": "true",
+							"pathId": "b",
+							"branchEnd": "b",
+							"ratio": "9.0/2.0"
+						}
+					]
+				},
+				{
+					"EndofTree": "true",
+					"pathId": "b",
+					"branchEnd": "b",
+					"ratio": "14.0/4.0"
+				}
+			]
+		}
+		
+	]
+
+}

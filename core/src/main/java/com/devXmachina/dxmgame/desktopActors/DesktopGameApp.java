@@ -89,4 +89,5 @@ public class DesktopGameApp implements Pool.Poolable {
             ((ManagerWindow) window).updateManager(full);
         }
     }
+
 }

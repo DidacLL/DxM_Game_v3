@@ -2,6 +2,8 @@ package com.devXmachina.dxmgame.screens;
 
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.scenes.scene2d.Actor;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.*;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
@@ -12,9 +14,11 @@ import com.devXmachina.dxmgame.GameLoader;
 
 public class NewGameMenu extends Stage {
     private static final String[] textArray = {"   ",
-            "this is the first question\n\n\n//left Button//right Button",
-            "this is a second question\n\n\n//A Button//B Button",
-            "third!\n\n\n//ok//end"
+            "\n\n\n   Politicament parlant,        \n com et consideres?         \n\n\n\n\n//Conservador//Progresista",
+            "\n\n\n   Que en penses      \n  de l'economia basada en \n  grans multinacionals?     \n\n\n\n\n//A favor//En contra",
+            "\n\n\n   Estaries a favor de      \n  perdre drets o llibertats     \n  a canvi d'una major      \n  seguretat?     \n\n\n\n\n//Si//No",
+            "\n\n\n   La IA (inteligencia artificial) \n  hauria de substituir una gran \n  quantitat de l'activitat \n  i decisio humana     \n\n\n\n\n// Si // No ",
+            "\n\n\n   Creus que s'haurien   \n  de gastar la quantitat de recursos \n  que sigui per fer les \n  situacions mes accessibles \n  per totes les persones?      \n\n\n\n\n// Si // No"
     };
 
     private Skin skin;
@@ -22,7 +26,7 @@ public class NewGameMenu extends Stage {
     private GameLoader gameLoader;
     private Table rootTable,members;
     private Label titlelabel,bodyLine_1,bodyLine_2,lastlabel;
-    private String results;
+    private String[] results;
     private int testStep;
     public String userName;
 
@@ -32,15 +36,17 @@ public class NewGameMenu extends Stage {
         this.gameLoader=game.gameLoader;
         skin = gameLoader.getSkin("BIOS");
         testStep=0;
+        results= new String[5];
 
     }
     public void start() {
         //todo añadir texto con Actions para simular carga
-        textArray[0]="\n Welcome " + userName +", \n \n  lets start our test!    \n//START";
+        textArray[0]="\n \n  Welcome " + userName +", \n \n This game implements a \n Machine Learning algorithm. \n \n Answer the following questions    \n to let game know you\n \n    (data is only saved in\n      your browser cookies)\n  \n \n        Lets start our test!    \n \n \n//START";
         config_rootTable();
         config_Title();
         config_body();
         config_buttons();
+
     }
 
     private void config_buttons() {
@@ -65,11 +71,20 @@ public class NewGameMenu extends Stage {
         rootTable.row();
         rootTable.add(backButton).pad(60,10,2,2).align(Align.bottomLeft);
         rootTable.add(nextButton).pad(60,10,2,2).align(Align.bottomRight);
+        addListener(new InputListener(){
+            @Override
+            public boolean keyDown(InputEvent event, int keycode) {
+                if(keycode==Input.Keys.ENTER){
+                    nextButton.fire(new ChangeListener.ChangeEvent());
+                }
+                return super.keyDown(event, keycode);
+            }
+        });
     }
     private void config_body() {
         rootTable.row();
         rootTable.add( gameLoader.superPool.obtain_label("\nSTARTING A NEW GAME.", skin)).align(Align.center).pad(2,10,20,2).colspan(2);
-        Label label = gameLoader.superPool.obtain_label(" This game uses a Machine Learning \n algorythm to predict your chooses during  \n the game, so we need you to answer a few \n questions to allow the IA know you better :) \n\n \n",skin);
+        Label label = gameLoader.superPool.obtain_label(" This game uses a Machine Learning \n algorithm to predict your choices during  \n the game, so we need you to answer a few \n questions to allow the IA know you better :) \n\n \n",skin);
         label.setFontScale(0.7f,0.8f);
         label.setAlignment(Align.topLeft,Align.left);
         rootTable.row();
@@ -108,20 +123,20 @@ public class NewGameMenu extends Stage {
         label.setAlignment(Align.bottom);
         String[] text = textArray[testStep].split("//");
         dialog.getTitleTable().add(label).expand();
-        dialog.text(text[0]).button(text[1], 1);
+        Label question = new Label(text[0],skin);
+        dialog.getContentTable().add(question).fillX().colspan(2);
+        dialog.button(text[1], 1);
         if (text.length>2){
             for (int i=2; i<text.length;i++) {
                 dialog.button(text[i],i);
             }
         }
-        dialog.key(Input.Keys.NUM_1, 1).key(Input.Keys.ESCAPE, 0).show(game.getCurrentStage());
+        dialog.key(Input.Keys.NUM_1, 3).key(Input.Keys.ESCAPE, 0).show(game.getCurrentStage());
     }
 
     private void endTest() {
         gameLoader.addTestResults(results);
         game.reloadMenu(false);
-        gameLoader.setSaveGame(true);
-        gameLoader.saveAllData();
         game.start_desktop();
         this.dispose();
 
@@ -134,7 +149,14 @@ public class NewGameMenu extends Stage {
             testStep=0;
         }
         else{
-            this.results+= ""+testStep+":"+object;
+            if(testStep>0){
+                if (object.equals(2)) {
+                    this.results[testStep - 1] = "b";
+                } else {
+                    this.results[testStep - 1] = "a";
+                }
+            }
+//
         }
 
     }

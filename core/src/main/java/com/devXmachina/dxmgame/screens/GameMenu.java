@@ -1,11 +1,11 @@
 package com.devXmachina.dxmgame.screens;
 
 import com.badlogic.gdx.Gdx;
-import com.badlogic.gdx.Graphics;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Preferences;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.scenes.scene2d.InputEvent;
+import com.badlogic.gdx.scenes.scene2d.InputListener;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.*;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
@@ -60,6 +60,15 @@ public class GameMenu extends Stage {
         }else{
             config_mainMenu();
         }
+        addListener(new InputListener(){
+            @Override
+            public boolean keyDown(InputEvent event, int keycode) {
+                if(keycode==Input.Keys.ENTER){
+                    optionD_Button.fire(new ChangeListener.ChangeEvent());
+                }
+                return super.keyDown(event, keycode);
+            }
+        });
     }
 
     private void config_stdButtons() {
@@ -77,21 +86,20 @@ public class GameMenu extends Stage {
         });
         sound_Button.setTransform(true);
         sound_Button.setScale(0.6f,0.8f);
-        debug_Button.addListener(new ChangeListener() {
+        debug_Button.addListener(new ClickListener() {
             @Override
-            public void changed(final ChangeEvent event, final Actor actor) {
-                if(!gameLoader.isDebugMode()) {
-                    debug_Button.setChecked(true);
-                    gameLoader.setDebugMode(true);
-
-                } else{
-                    debug_Button.setChecked(false);
-                    gameLoader.setDebugMode(false);
-                }
+            public void clicked(InputEvent event, float x, float y) {
+                    debug_Button.setChecked(!gameLoader.isDebugMode());
+                    gameLoader.setDebugMode(!gameLoader.isDebugMode());
+                    gameLoader.saveAllData();
+                super.clicked(event, x, y);
             }
+
         });
+
         debug_Button.setTransform(true);
         debug_Button.setScale(0.6f,0.8f);
+        debug_Button.setChecked(gameLoader.isDebugMode());
         fullScreen_Button.addListener(new ChangeListener() {
             @Override
             public void changed(final ChangeEvent event, final Actor actor) {
@@ -131,10 +139,11 @@ public class GameMenu extends Stage {
 
 
         optionD_Button.setText(" NEW GAME ");
+        optionD_Button.setProgrammaticChangeEvents(true);
         optionD_Button.addListener(new ChangeListener() {
             @Override
             public void changed(final ChangeEvent event, final Actor actor) {
-                if ((textField.getText()==null)||(textField.getText().equalsIgnoreCase("user") || textField.getText().equalsIgnoreCase(" ") )) {
+                if ((textField.getText()==null)||(textField.getText().trim().equalsIgnoreCase(""))) {
                     Dialog dialog = new Dialog("", skin, "dialog-modal");
                     dialog.getTitleTable().reset();
                     Label label = new Label("ERR_MISSING_USERNAME", skin, "title");
@@ -180,6 +189,7 @@ public class GameMenu extends Stage {
                 game.setGameState(DxM_Game.GameState.DESKTOP_MODE);
             }
         });
+
         optionC_Button.setVisible(false);
         optionB_Button.setVisible(false);
         optionA_Button.setText(" DELETE GAME ");
@@ -204,7 +214,15 @@ public class GameMenu extends Stage {
             }
         });
 
-        bodyLine_1.setText("Welcome again "+gameLoader.getUserName()+"  ");
+        bodyLine_1.setText("Welcome again ");
+        bodyLine_2.setText("           "+gameLoader.getUserName());
+        bodyLine_3.setText("*** DxM_Game v3 ***");
+        bodyLine_4.setText("Aquest joc guarda les dades\n a les Cookies del teu navegador");
+        bodyLine_5.setText("aquestes dades no son compartides,\n       Gracies per Jugar!");
+        bodyLine_2.setFontScale(1.3f,1.38f);
+        bodyLine_3.setFontScale(0.70f,0.85f);
+        bodyLine_4.setFontScale(0.70f,0.85f);
+        bodyLine_5.setFontScale(0.70f,0.85f);
         lastLineTable.setVisible(false);
 
     }
@@ -245,7 +263,7 @@ public class GameMenu extends Stage {
         lastlabel=gameLoader.superPool.obtain_label("ENTER YOUR NAME:   ",skin);
         lastLineTable.add(lastlabel).pad(15,10,2,2).align(Align.right);
         lastLineTable.add(textField).pad(15,10,2,2);
-        rootTable.add(lastLineTable).align(Align.bottom).colspan(2);
+        rootTable.add(lastLineTable).fillY().align(Align.bottom).colspan(2);
         //-------- BOTTOM BUTTONS
         rootTable.row().fillY().align(Align.bottom);
         bottomButtons.defaults().fillX().expandX();
@@ -259,12 +277,12 @@ public class GameMenu extends Stage {
         rootTable = gameLoader.superPool.obtain_table(skin);
         rootTable.background("window");
         rootTable.setFillParent(true);
-        if(gameLoader.isDebugMode()){rootTable.debugAll();}
+//        if(gameLoader.isDebugMode()){rootTable.debugAll();}
         rootTable.align(Align.topLeft);
         return rootTable;
     }
     private void instance_allActors() {
-        titlelabel = new Label("**** Dev X Machina ****  \nIA & OpenSource development simulator   ", skin);
+        titlelabel = new Label("**** Dev X Machina ****  \nIA & OpenSource development simulator  ", skin);
         bodyLine_1 =  new Label(line_1, skin);
         bodyLine_2 =  new Label(line_2, skin);
         bodyLine_3 =  new Label(line_3, skin);
@@ -309,6 +327,15 @@ public class GameMenu extends Stage {
 
     public boolean isNewGame(){
         return newGame;
+    }
+    public void update_debugButton(){
+        debug_Button.setChecked(gameLoader.isDebugMode());
+    }
+
+    @Override
+    public void act() {
+        if(Gdx.input.getInputProcessor().keyDown(Input.Keys.ENTER)){optionD_Button.setChecked(true);}
+        super.act();
     }
 
     @Override

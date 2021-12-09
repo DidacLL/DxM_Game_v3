@@ -30,7 +30,7 @@ public abstract class AppWindow extends Window {
         this.app = app;
         this.name = app.appName;
         this.gameLoader= app.game.gameLoader;
-        this.appContentPages= new Array<AppPage>();
+        this.appContentPages= new Array<>();
         setSize(RESTWIN_WIDTH,RESTWIN_HEIGHT);
         this.setPosition(210,120);
         align(Align.center);
@@ -58,7 +58,7 @@ public abstract class AppWindow extends Window {
         closeButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                minimized = true;
+                if(app.appType!=DesktopAppType.CONSOLE){minimized = true;}
             }
         });
         //CREATE CENTER TITLE
@@ -92,7 +92,7 @@ public abstract class AppWindow extends Window {
         minButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                minimized = true;
+                if(app.appType!=DesktopAppType.CONSOLE){minimized = true;}
             }
         });
         getTitleTable().add(minButton);

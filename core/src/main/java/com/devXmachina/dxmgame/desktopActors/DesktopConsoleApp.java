@@ -10,7 +10,11 @@ public class DesktopConsoleApp extends DesktopGameApp{
     }
 
     public void fire_consoleEvent(GameEvent gameEvent){
-        desktop.addActor( new ConsoleWindow(this,gameEvent));
+        if(!game.gameLoader.isAutoPlay()){
+            desktop.addActor( new ConsoleWindow(this,gameEvent));
+            game.gameLoader.consoleBusy=true;
+        }
+
 //        desktop.showGameEvent_PageApp(gameEvent);
     }
 

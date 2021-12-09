@@ -1,0 +1,19 @@
+{
+	"id": "decision4",
+	"EndofTree": "false",
+	"pathId": "",
+	"subBranches": [{
+			"EndofTree": "true",
+			"pathId": "a",
+			"branchEnd": "b",
+			"ratio": "11.0/4.0"
+		},
+		{
+			"EndofTree": "true",
+			"pathId": "b",
+			"branchEnd": "a",
+			"ratio": "23.0/6.0"
+		}
+	]
+
+}
