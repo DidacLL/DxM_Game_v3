@@ -78,3 +78,24 @@ LibGDX structure:
 								pauseGameMenu() que serà com el main, pero amb la opció de resume per tornar al joc.
 								
 								
+								
+								
+								
+								
+								
+Thanks to :
+
+Commodore64 libGDX Skin : 	 https://ray3k.wordpress.com/artwork/commodore-64-ui-skin-for-libgdx/ by ray3k
+
+os8UI libGDX Skin: 	https://github.com/raeleus/OS-Eight-UI-Skin-Example/releases  by raeleus
+
+free-icons-pack Col·lecció d'icones en format PNG:	 https://pablogamedev.itch.io/free-icons by PabloGameDev
+
+
+libGDX is licensed under Apache 2.0 meaning you can use it free of charge, without strings attached in commercial and non-commercial projects. 
+
+WEKA is licensed under the GNU General Public license (GPL 2.0 for Weka 3.6) and (GPL 3.0 for Weka > 3.7.5). Any derivative work obtained under this license must be licensed under the GPL if this derivative work is distributed to a third party.
+
+DxM_Game està publicat sota una llicència Creative Commons Reconocimiento-NoComercial-CompartirIgual 4.0 Internacional
+
+								
